@@ -23,8 +23,10 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
-    const newSocket = io("https://sockedserver.onrender.com", {
+    const newSocket = io(apiUrl, {
       query: { 
         roomId, 
         username,

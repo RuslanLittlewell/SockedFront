@@ -29,10 +29,8 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     [key: string]: RTCPeerConnection;
   }>({});
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  // Состояние для отслеживания, идет ли трансляция
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-  // Состояние для выбора разрешения
   const [resolution, setResolution] = useState("1920x1080");
   const resolutionOptions = [
     { label: "1920x1080", width: 1920, height: 1080 },
@@ -40,10 +38,33 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     { label: "640x480", width: 640, height: 480 },
   ];
 
-  // Функция создания RTCPeerConnection
-  const createPeerConnection = (peerId: string) => {
+  const createPeerConnection = () => {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [
+        {
+          urls: "stun:stun.relay.metered.ca:80",
+        },
+        {
+          urls: "turn:global.relay.metered.ca:80",
+          username: "b2b91d474dab8140869cdadc",
+          credential: "2EsWAA8CdUuixC34",
+        },
+        {
+          urls: "turn:global.relay.metered.ca:80?transport=tcp",
+          username: "b2b91d474dab8140869cdadc",
+          credential: "2EsWAA8CdUuixC34",
+        },
+        {
+          urls: "turn:global.relay.metered.ca:443",
+          username: "b2b91d474dab8140869cdadc",
+          credential: "2EsWAA8CdUuixC34",
+        },
+        {
+          urls: "turns:global.relay.metered.ca:443?transport=tcp",
+          username: "b2b91d474dab8140869cdadc",
+          credential: "2EsWAA8CdUuixC34",
+        },
+      ],
     });
 
     if (localStream) {
@@ -57,7 +78,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
       if (event.candidate) {
         socket?.emit("ice-candidate", {
           candidate: event.candidate,
-          peerId,
+          peerId: "broadcaster",
           roomId,
         });
       }
@@ -80,25 +101,30 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     return pc;
   };
 
-  // Инициализация сокета при монтировании компонента
   useEffect(() => {
-    const newSocket = io("https://sockedserver.onrender.com/", {
-      query: { roomId, username, isHost: true },
+    const apiUrl = import.meta.env.VITE_API_URL;
+
+    const newSocket = io(apiUrl, {
+      query: { roomId, username, role: "broadcaster" },
     });
 
     newSocket.on("connect", () => {
       console.log("Подключено к серверу");
     });
 
-    newSocket.on("offer", async ({ offer, peerId }) => {
-      const pc = createPeerConnection(peerId);
-      setPeerConnections((prev) => ({ ...prev, [peerId]: pc }));
-
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      socket?.emit("answer", { answer, peerId, roomId });
+    newSocket.on("offer", async ({ offer }) => {
+      console.log("Получен offer от стримера");
+      try {
+        const pc = createPeerConnection();
+        setPeerConnections((prev) => ({ ...prev, broadcaster: pc }));
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket?.emit("answer", { answer: pc.localDescription, roomId, peerId: "broadcaster" });
+        console.log("Отправлен answer");
+      } catch (error) {
+        console.error("Ошибка при обработке offer:", error);
+      }
     });
 
     newSocket.on("answer", async ({ answer, peerId }) => {
@@ -122,7 +148,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     };
   }, [roomId, username]);
 
-  // Получение списка устройств
   useEffect(() => {
     const getDevices = async () => {
       try {
@@ -150,11 +175,9 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     getDevices();
   }, []);
 
-  // Получение локального превью при изменении выбранной камеры/микрофона/разрешения
   useEffect(() => {
     const getPreviewStream = async () => {
       try {
-        // Если уже есть стрим, останавливаем его перед получением нового
         if (localStream) {
           localStream.getTracks().forEach((track) => track.stop());
         }
@@ -191,47 +214,44 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     };
 
     getPreviewStream();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCamera, selectedMicrophone, resolution]);
 
-  // Функция запуска трансляции (отправка потока)
   const startStream = async () => {
+    if (!socket || !localStream) {
+      console.error("Socket or local stream not ready");
+      return;
+    }
+  
     try {
-      if (!localStream) {
-        console.error("Локальный стрим не доступен");
-        return;
+      if (peerConnections["broadcaster"]) {
+        peerConnections["broadcaster"].close();
       }
-      // Создаем RTCPeerConnection для трансляции
-      const pc = createPeerConnection("broadcaster");
+  
+      const pc = createPeerConnection();
       setPeerConnections((prev) => ({ ...prev, broadcaster: pc }));
-
+  
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-
-      socket?.emit("offer", {
+  
+      console.log("Sending offer to room:", roomId);
+      
+      socket.emit("offer", {
         offer,
         peerId: "broadcaster",
         roomId,
       });
-
-      // Обработка завершения треков (опционально)
-      localStream.getTracks().forEach((track) => {
-        track.onended = () => {
-          console.log(`${track.kind} устройство отключено`);
-        };
-      });
+  
+      setIsBroadcasting(true);
     } catch (error) {
-      console.error("Ошибка при старте трансляции:", error);
+      console.error("Error starting broadcast:", error);
     }
   };
 
-  // Функция для старта трансляции по нажатию кнопки
   const handleStartBroadcasting = async () => {
     await startStream();
     setIsBroadcasting(true);
   };
 
-  // Функция для остановки трансляции
   const stopStream = () => {
     if (peerConnections["broadcaster"]) {
       peerConnections["broadcaster"].close();
