@@ -67,13 +67,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
       ],
     });
 
-    if (localStream) {
-      localStream.getTracks().forEach((track) => {
-        console.log(`Добавляем трек: ${track.kind}`);
-        pc.addTrack(track, localStream);
-      });
-    }
-
+    
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket?.emit("ice-candidate", {
@@ -108,38 +102,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
       query: { roomId, username, role: "broadcaster" },
     });
 
-    newSocket.on("connect", () => {
-      console.log("Подключено к серверу");
-    });
-
-    newSocket.on("offer", async ({ offer }) => {
-      console.log("Получен offer от стримера");
-      try {
-        const pc = createPeerConnection();
-        setPeerConnections((prev) => ({ ...prev, broadcaster: pc }));
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket?.emit("answer", { answer: pc.localDescription, roomId, peerId: "broadcaster" });
-        console.log("Отправлен answer");
-      } catch (error) {
-        console.error("Ошибка при обработке offer:", error);
-      }
-    });
-
-    newSocket.on("answer", async ({ answer, peerId }) => {
-      const pc = peerConnections[peerId];
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      }
-    });
-
-    newSocket.on("ice-candidate", async ({ candidate, peerId }) => {
-      const pc = peerConnections[peerId];
-      if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
 
     setSocket(newSocket);
 
@@ -218,34 +180,62 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
 
   const startStream = async () => {
     if (!socket || !localStream) {
-      console.error("Socket or local stream not ready");
+      console.error("Socket или локальный стрим не готовы");
       return;
     }
   
     try {
-      if (peerConnections["broadcaster"]) {
-        peerConnections["broadcaster"].close();
-      }
-  
       const pc = createPeerConnection();
       setPeerConnections((prev) => ({ ...prev, broadcaster: pc }));
   
+      // Добавляем все треки из локального потока в PeerConnection
+      localStream.getTracks().forEach((track) => {
+        console.log(`Добавление трека: ${track.kind}`);
+        pc.addTrack(track, localStream);
+      });
+  
+      // Создаём offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
   
-      console.log("Sending offer to room:", roomId);
-      
+      console.log("Отправка offer на сервер");
+
       socket.emit("offer", {
-        offer,
+        offer: pc.localDescription,
         peerId: "broadcaster",
         roomId,
       });
+
+      console.log("Offer отправлен: ", pc.localDescription);
   
       setIsBroadcasting(true);
+
+      // Прослушивание ответа от зрителя
+      socket.on("answer", async ({ answer, peerId }) => {
+        console.log("Получен answer от зрителя");
+        const pc = peerConnections[peerId];
+        if (pc && answer) {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          console.log("Удалённое описание установлено успешно");
+        }
+      });
+
+      // Прослушивание входящих ICE кандидатов от зрителя
+      socket.on("ice-candidate", async ({ candidate, peerId }) => {
+        console.log("Получен ICE-кандидат от зрителя");
+        const pc = peerConnections[peerId];
+        if (pc && candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log("ICE кандидат добавлен успешно");
+        }
+      });
+
     } catch (error) {
-      console.error("Error starting broadcast:", error);
+      console.error("Ошибка при запуске трансляции:", error);
     }
   };
+
+
 
   const handleStartBroadcasting = async () => {
     await startStream();
