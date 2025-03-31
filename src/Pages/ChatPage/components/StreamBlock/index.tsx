@@ -1,0 +1,374 @@
+import React, { useEffect, useRef, useState } from "react";
+import {
+  FaMicrophone,
+  FaMicrophoneSlash,
+  FaExpand,
+  FaCompress,
+} from "react-icons/fa";
+import { io, Socket } from "socket.io-client";
+
+interface VideoStreamProps {
+  username: string;
+  roomId: string;
+}
+
+export const StreamBlock: React.FC<VideoStreamProps> = ({
+  username,
+  roomId,
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>("");
+  const [selectedMicrophone, setSelectedMicrophone] = useState<string>("");
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [peerConnections, setPeerConnections] = useState<{
+    [key: string]: RTCPeerConnection;
+  }>({});
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  // Состояние для отслеживания, идет ли трансляция
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  // Состояние для выбора разрешения
+  const [resolution, setResolution] = useState("1920x1080");
+  const resolutionOptions = [
+    { label: "1920x1080", width: 1920, height: 1080 },
+    { label: "1280x720", width: 1280, height: 720 },
+    { label: "640x480", width: 640, height: 480 },
+  ];
+
+  // Функция создания RTCPeerConnection
+  const createPeerConnection = (peerId: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        pc.addTrack(track, localStream);
+      });
+    }
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket?.emit("ice-candidate", {
+          candidate: event.candidate,
+          peerId,
+          roomId,
+        });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log("Состояние соединения:", pc.connectionState);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("Состояние ICE:", pc.iceConnectionState);
+    };
+
+    return pc;
+  };
+
+  // Инициализация сокета при монтировании компонента
+  useEffect(() => {
+    const newSocket = io("https://sockedserver.onrender.com:10000", {
+      query: { roomId, username, isHost: true },
+    });
+
+    newSocket.on("connect", () => {
+      console.log("Подключено к серверу");
+    });
+
+    newSocket.on("offer", async ({ offer, peerId }) => {
+      const pc = createPeerConnection(peerId);
+      setPeerConnections((prev) => ({ ...prev, [peerId]: pc }));
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket?.emit("answer", { answer, peerId, roomId });
+    });
+
+    newSocket.on("answer", async ({ answer, peerId }) => {
+      const pc = peerConnections[peerId];
+      if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      }
+    });
+
+    newSocket.on("ice-candidate", async ({ candidate, peerId }) => {
+      const pc = peerConnections[peerId];
+      if (pc) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, [roomId, username]);
+
+  // Получение списка устройств
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setCameras(devices.filter((device) => device.kind === "videoinput"));
+        setMicrophones(
+          devices.filter((device) => device.kind === "audioinput")
+        );
+
+        const defaultCamera = devices.find(
+          (device) => device.kind === "videoinput"
+        );
+        const defaultMicrophone = devices.find(
+          (device) => device.kind === "audioinput"
+        );
+
+        if (defaultCamera) setSelectedCamera(defaultCamera.deviceId);
+        if (defaultMicrophone)
+          setSelectedMicrophone(defaultMicrophone.deviceId);
+      } catch (error) {
+        console.error("Ошибка при получении списка устройств:", error);
+      }
+    };
+
+    getDevices();
+  }, []);
+
+  // Получение локального превью при изменении выбранной камеры/микрофона/разрешения
+  useEffect(() => {
+    const getPreviewStream = async () => {
+      try {
+        // Если уже есть стрим, останавливаем его перед получением нового
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+        }
+
+        const [width, height] = resolution.split("x").map(Number);
+        const constraints = {
+          video: {
+            deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
+            width: { ideal: width },
+            height: { ideal: height },
+            frameRate: { ideal: 30 },
+          },
+          audio: {
+            deviceId: selectedMicrophone
+              ? { exact: selectedMicrophone }
+              : undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        };
+
+        const mediaStream = await navigator.mediaDevices.getUserMedia(
+          constraints
+        );
+        setStream(mediaStream);
+        setLocalStream(mediaStream);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (error) {
+        console.error("Ошибка при получении превью:", error);
+      }
+    };
+
+    getPreviewStream();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCamera, selectedMicrophone, resolution]);
+
+  // Функция запуска трансляции (отправка потока)
+  const startStream = async () => {
+    try {
+      if (!localStream) {
+        console.error("Локальный стрим не доступен");
+        return;
+      }
+      // Создаем RTCPeerConnection для трансляции
+      const pc = createPeerConnection("broadcaster");
+      setPeerConnections((prev) => ({ ...prev, broadcaster: pc }));
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socket?.emit("offer", {
+        offer,
+        peerId: "broadcaster",
+        roomId,
+      });
+
+      // Обработка завершения треков (опционально)
+      localStream.getTracks().forEach((track) => {
+        track.onended = () => {
+          console.log(`${track.kind} устройство отключено`);
+        };
+      });
+    } catch (error) {
+      console.error("Ошибка при старте трансляции:", error);
+    }
+  };
+
+  // Функция для старта трансляции по нажатию кнопки
+  const handleStartBroadcasting = async () => {
+    await startStream();
+    setIsBroadcasting(true);
+  };
+
+  // Функция для остановки трансляции
+  const stopStream = () => {
+    if (peerConnections["broadcaster"]) {
+      peerConnections["broadcaster"].close();
+      const newPeerConnections = { ...peerConnections };
+      delete newPeerConnections["broadcaster"];
+      setPeerConnections(newPeerConnections);
+    }
+    setIsBroadcasting(false);
+  };
+
+  const toggleMute = () => {
+    if (stream) {
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!isMuted);
+      }
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (!document.fullscreenElement) {
+        videoRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  const handleCameraChange = (deviceId: string) => {
+    setSelectedCamera(deviceId);
+  };
+
+  const handleMicrophoneChange = (deviceId: string) => {
+    setSelectedMicrophone(deviceId);
+  };
+
+  const handleResolutionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setResolution(e.target.value);
+  };
+
+  return (
+    <div className="relative w-1/2 h-full border border-[#acacac] bg-white rounded-xs overflow-hidden p-[10px]">
+      <p className="text-black text-left">{username}'s room</p>
+      <div className="bg-[#e0e0e0] text-lg text-black text-left pl-[10px] mt-5 h-8">
+        Welcome back, {username}
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr] gap-[10px] mt-[10px]">
+        <div className="border border-[#acacac] pb-[10px]">
+          <p className="text-xl m-[10px] text-left">Camera</p>
+          <select
+            value={selectedCamera}
+            onChange={(e) => handleCameraChange(e.target.value)}
+            className="bg-white w-[calc(100%-20px)] text-black text-sm border border-[#acacac] mx-2 py-2 px-2"
+          >
+            {cameras.map((camera) => (
+              <option key={camera.deviceId} value={camera.deviceId}>
+                {camera.label || `Камера ${camera.deviceId.slice(0, 5)}`}
+              </option>
+            ))}
+          </select>
+          <p className="text-xl m-[10px] text-left">Resolution</p>
+          <select
+            value={resolution}
+            onChange={handleResolutionChange}
+            className="bg-white w-[calc(100%-20px)] text-black text-sm border border-[#acacac] mx-2 py-2 px-2"
+          >
+            {resolutionOptions.map((option) => (
+              <option key={option.label} value={option.label}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="relative w-full">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full object-cover"
+          />
+          <button
+            onClick={toggleFullscreen}
+            className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+          >
+            {isFullscreen ? (
+              <FaCompress className="text-white text-xl" />
+            ) : (
+              <FaExpand className="text-white text-xl" />
+            )}
+          </button>
+        </div>
+
+        <div className="border border-[#acacac] pb-[10px]">
+          <p className="text-xl m-[10px] text-left">Microphone</p>
+          <select
+            value={selectedMicrophone}
+            onChange={(e) => handleMicrophoneChange(e.target.value)}
+            className="bg-white text-black text-sm border border-[#acacac] mx-2 py-2 px-2"
+          >
+            {microphones.map((microphone) => (
+              <option key={microphone.deviceId} value={microphone.deviceId}>
+                {microphone.label ||
+                  `Микрофон ${microphone.deviceId.slice(0, 5)}`}
+              </option>
+            ))}
+          </select>
+
+          <button onClick={toggleMute} className="p-2">
+            {isMuted ? (
+              <FaMicrophoneSlash className="text-black text-xl" />
+            ) : (
+              <FaMicrophone className="text-black text-xl" />
+            )}
+          </button>
+        </div>
+
+        {isBroadcasting ? (
+          <button
+            onClick={stopStream}
+            className="bg-red-500 border border-red-700 text-white h-[32px] flex items-center justify-center self-center rounded"
+          >
+            Stop Boardcasting
+          </button>
+        ) : (
+          <button
+            onClick={handleStartBroadcasting}
+            className="bg-[#f47321] border border-[#cd5d26] text-white h-[32px] flex items-center justify-center self-center rounded"
+          >
+            Start Boardcasting
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
