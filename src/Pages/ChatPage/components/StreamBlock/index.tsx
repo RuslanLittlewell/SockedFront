@@ -48,6 +48,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
 
     if (localStream) {
       localStream.getTracks().forEach((track) => {
+        console.log(`Добавляем трек: ${track.kind}`);
         pc.addTrack(track, localStream);
       });
     }
@@ -81,7 +82,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
 
   // Инициализация сокета при монтировании компонента
   useEffect(() => {
-    const newSocket = io("https://sockedserver.onrender.com:10000", {
+    const newSocket = io("https://sockedserver.onrender.com/", {
       query: { roomId, username, isHost: true },
     });
 
