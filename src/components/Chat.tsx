@@ -22,7 +22,6 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [tokens, setTokens] = useState(0);
 
   useEffect(() => {
     const newSocket = io("https://sockedserver.onrender.com", {
