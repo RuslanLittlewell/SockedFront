@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  FaMicrophone,
-  FaMicrophoneSlash,
   FaExpand,
   FaCompress,
 } from "react-icons/fa";
@@ -202,17 +200,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     setIsBroadcasting(false);
   };
   
-
-  const toggleMute = () => {
-    if (stream) {
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!isMuted);
-      }
-    }
-  };
-
   const toggleFullscreen = () => {
     if (videoRef.current) {
       if (!document.fullscreenElement) {
