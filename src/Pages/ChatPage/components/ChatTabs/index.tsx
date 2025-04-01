@@ -5,18 +5,24 @@ import clsx from "clsx";
 interface Props {
   roomId: string;
   username: string;
+  setTokens: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export const ChatTabs: FC<Props> = ({ roomId, username }) => {
+export const ChatTabs: FC<Props> = ({ roomId, username, setTokens }) => {
   const [tab, setTab] = useState(0);
-
+  const [users, setUsers] = useState<(string | undefined)[]>([]);
   const tabs = [
-    <Chat roomId={roomId} username={username} />,
+    <Chat
+      roomId={roomId}
+      username={username}
+      setTokens={setTokens}
+      setUsers={setUsers}
+    />,
     <PM />,
-    <Users />,
+    <Users users={users} />,
   ];
 
-  const tabName = ["CHAT", "PM", "USERS (1)"];
+  const tabName = ["CHAT", "PM", `USERS (${users.length})`];
 
   return (
     <div className="w-1/2 border border-[#acacac]">

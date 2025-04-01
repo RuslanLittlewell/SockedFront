@@ -2,9 +2,9 @@ import { FC } from "react";
 
 interface Props {
   username: string;
+  tokens: number;
 }
-export const Header: FC<Props> = ({ username }) => {
-  const tokens = 2;
+export const Header: FC<Props> = ({ username, tokens }) => {
   return (
     <>
       <div className="flex justify-between h-[88px] bg-white pt-[6px]">

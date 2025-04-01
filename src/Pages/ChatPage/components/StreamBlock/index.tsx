@@ -296,7 +296,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
           <select
             value={selectedMicrophone}
             onChange={(e) => handleMicrophoneChange(e.target.value)}
-            className="bg-white text-black text-sm border border-[#acacac] mx-2 py-2 px-2"
+            className="bg-white text-black text-sm  w-[calc(100%-20px)] border border-[#acacac] mx-2 py-2 px-2"
           >
             {microphones.map((microphone) => (
               <option key={microphone.deviceId} value={microphone.deviceId}>
@@ -305,14 +305,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
               </option>
             ))}
           </select>
-
-          <button onClick={toggleMute} className="p-2">
-            {isMuted ? (
-              <FaMicrophoneSlash className="text-black text-xl" />
-            ) : (
-              <FaMicrophone className="text-black text-xl" />
-            )}
-          </button>
         </div>
 
         {isBroadcasting ? (

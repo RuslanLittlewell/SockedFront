@@ -8,15 +8,18 @@ interface Message {
   timestamp: Date;
   tokens: number;
   donater?: string;
+  isHost?: boolean;
 }
 
 interface ChatProps {
   roomId: string;
   username: string;
   isHost?: boolean;
+  setTokens: React.Dispatch<React.SetStateAction<number>>
+  setUsers: React.Dispatch<React.SetStateAction<(string | undefined)[]>>
 }
 
-export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
+export const Chat = ({ roomId, username, setTokens, setUsers }: ChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -29,7 +32,6 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
       query: {
         roomId,
         username,
-        isHost,
       },
     });
 
@@ -47,15 +49,41 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
       setMessages((prev) => [...prev, message]);
     });
 
+    newSocket.on("messages-deleted", () => {
+      console.log("🗑️ Все сообщения были удалены сервером.");
+      setMessages([]); // Очистка локального состояния сообщений на клиенте
+      setTokens(0);
+      setUsers([]);
+    });
+
     setSocket(newSocket);
 
     return () => {
       newSocket.close();
     };
-  }, [roomId, username, isHost]);
+  }, [roomId, username]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const lastMessage = messages[messages.length - 1];
+
+    if(lastMessage) {
+      if(lastMessage.tokens > 0) {
+        setTokens((i: number) => i + lastMessage.tokens)
+      }
+      const UserNickname = lastMessage.donater;
+      setUsers((prevUsers) => {
+        const userExists = (prevUsers as string[]).some((user: string) => user === UserNickname);
+  
+        if (!userExists) {
+          return [...prevUsers, UserNickname];
+        }
+  
+        return prevUsers; 
+      });
+    }
+
+
   }, [messages]);
 
   const sendMessage = (e: React.FormEvent) => {
@@ -64,7 +92,7 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
       const messageData = {
         text: newMessage,
         sender: username,
-        tokens: 0,
+        isHost: true
       };
       console.log("Отправка сообщения:", messageData);
       socket.emit("chat message", messageData);
@@ -76,7 +104,7 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
     <div
       className={`bg-white text-black transition-all duration-300 h-[calc(100%-35px)]`}
     >
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-0 h-[calc(100%-73px)]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-1 pb-0 h-[calc(100%-73px)]">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -86,16 +114,16 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
           >
             <div className={`max-w-[80%] rounded-lg`}>
               {message.tokens > 0 ? (
-                <div className="text-xs mt-1 bg-yellow-500 text-black font-bold">
+                <div className="text-xs mt-1 bg-yellow-500 text-black font-bold px-1">
                   <span className="text-red-500">{message.donater}</span> tipped{" "}
                   {message.tokens} token
                 </div>
-              ) : (
+              ) : message.isHost ? (<div className="text-sm bg-orange-500 px-2 rounded text-white">Me: {message.text}</div>) : (
                 <div className="text-sm">
-                  {" "}
-                  <span className="text-black-500">
+                  <span className="text-black-500 font-bold">
                     {message.donater}
-                  </span>: {message.text}
+                  </span>
+                  : {message.text}
                 </div>
               )}
             </div>

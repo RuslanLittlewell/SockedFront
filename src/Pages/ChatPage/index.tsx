@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import { StreamBlock } from "@/Pages/ChatPage/components/StreamBlock";
 import Header from "./components/Header";
 import { ChatTabs } from "./components/ChatTabs";
@@ -9,12 +9,14 @@ interface Props {
 }
 
 export const ChatPage: FC<Props> = ({ roomId, username }) => {
+  const [tokens, setTokens] = useState<number>(0);
+
   return (
     <div className="min-h-screen">
-      <Header username={username} />
+      <Header username={username} tokens={tokens} />
       <div className="flex gap-[10px] bg-[#e0e0e0] border border-[#acacac] p-1 ml-[32px] mr-[17px] rounded-sm h-[614px]">
         <StreamBlock username={username} roomId={roomId} />
-        <ChatTabs roomId={roomId} username={username} />
+        <ChatTabs roomId={roomId} username={username} setTokens={setTokens}/>
       </div>
     </div>
   );
