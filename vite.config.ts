@@ -12,6 +12,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      "simple-peer": "simple-peer/simplepeer.min.js",
+      crypto: 'crypto-browserify',
     },
   },
+  define: {
+    global: "globalThis"
+  }
 })

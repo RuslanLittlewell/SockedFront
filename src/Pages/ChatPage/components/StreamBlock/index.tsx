@@ -5,6 +5,7 @@ import {
   FaExpand,
   FaCompress,
 } from "react-icons/fa";
+import SimplePeer from "simple-peer"
 import { io, Socket } from "socket.io-client";
 
 interface VideoStreamProps {
@@ -38,62 +39,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     { label: "640x480", width: 640, height: 480 },
   ];
 
-  const createPeerConnection = () => {
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: "stun:stun.relay.metered.ca:80",
-        },
-        {
-          urls: "turn:global.relay.metered.ca:80",
-          username: "b2b91d474dab8140869cdadc",
-          credential: "2EsWAA8CdUuixC34",
-        },
-        {
-          urls: "turn:global.relay.metered.ca:80?transport=tcp",
-          username: "b2b91d474dab8140869cdadc",
-          credential: "2EsWAA8CdUuixC34",
-        },
-        {
-          urls: "turn:global.relay.metered.ca:443",
-          username: "b2b91d474dab8140869cdadc",
-          credential: "2EsWAA8CdUuixC34",
-        },
-        {
-          urls: "turns:global.relay.metered.ca:443?transport=tcp",
-          username: "b2b91d474dab8140869cdadc",
-          credential: "2EsWAA8CdUuixC34",
-        },
-      ],
-    });
-
-    
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket?.emit("ice-candidate", {
-          candidate: event.candidate,
-          peerId: "broadcaster",
-          roomId,
-        });
-      }
-    };
-
-    pc.ontrack = (event) => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = event.streams[0];
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      console.log("Состояние соединения:", pc.connectionState);
-    };
-
-    pc.oniceconnectionstatechange = () => {
-      console.log("Состояние ICE:", pc.iceConnectionState);
-    };
-
-    return pc;
-  };
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL;
@@ -161,15 +106,20 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
           },
         };
 
-        const mediaStream = await navigator.mediaDevices.getUserMedia(
+        await navigator.mediaDevices.getUserMedia(
           constraints
-        );
-        setStream(mediaStream);
-        setLocalStream(mediaStream);
+        ).then(stream => {
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+
+          setStream(stream);
+          setLocalStream(stream);
+        })
+
+
+       
       } catch (error) {
         console.error("Ошибка при получении превью:", error);
       }
@@ -178,57 +128,45 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     getPreviewStream();
   }, [selectedCamera, selectedMicrophone, resolution]);
 
+
   const startStream = async () => {
     if (!socket || !localStream) {
       console.error("Socket или локальный стрим не готовы");
       return;
     }
-  
+    const peer = new SimplePeer({
+			initiator: true,
+			trickle: false,
+			stream: stream as MediaStream
+		})
+
     try {
-      const pc = createPeerConnection();
-      setPeerConnections((prev) => ({ ...prev, broadcaster: pc }));
-  
-      // Добавляем все треки из локального потока в PeerConnection
-      localStream.getTracks().forEach((track) => {
-        console.log(`Добавление трека: ${track.kind}`);
-        pc.addTrack(track, localStream);
-      });
-  
-      // Создаём offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-  
-      console.log("Отправка offer на сервер");
 
-      socket.emit("offer", {
-        offer: pc.localDescription,
-        peerId: "broadcaster",
-        roomId,
+      peer.on("signal", (data) => {
+        console.log("📡 Sending offer to server", data);
+    
+        socket.emit("offer", { offer: data, roomId, username });
       });
 
-      console.log("Offer отправлен: ", pc.localDescription);
+      socket.on("answer", (data) => {
+        console.log("📡 Получен answer от зрителя");
+        peer.signal(data.answer); // Важно: передаём answer обратно в SimplePeer
+      });
+    
+      socket.on("ice-candidate", (candidate) => {
+        console.log("📡 Получен ICE-кандидат");
+        if (candidate) peer.signal(candidate);
+      });
+
+      peer.on("stream", (stream) => {
+        
+        if(videoRef.current) {
+				  videoRef.current.srcObject = stream
+        }
+			
+		})
   
       setIsBroadcasting(true);
-
-      // Прослушивание ответа от зрителя
-      socket.on("answer", async ({ answer, peerId }) => {
-        console.log("Получен answer от зрителя");
-        const pc = peerConnections[peerId];
-        if (pc && answer) {
-          await pc.setRemoteDescription(new RTCSessionDescription(answer));
-          console.log("Удалённое описание установлено успешно");
-        }
-      });
-
-      // Прослушивание входящих ICE кандидатов от зрителя
-      socket.on("ice-candidate", async ({ candidate, peerId }) => {
-        console.log("Получен ICE-кандидат от зрителя");
-        const pc = peerConnections[peerId];
-        if (pc && candidate) {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          console.log("ICE кандидат добавлен успешно");
-        }
-      });
 
     } catch (error) {
       console.error("Ошибка при запуске трансляции:", error);
@@ -243,14 +181,27 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
   };
 
   const stopStream = () => {
+    // Остановить все медиатрекеры (аудио и видео)
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+      setLocalStream(null); // Сброс локального потока
+    }
+  
+    // Закрытие PeerJS соединений
     if (peerConnections["broadcaster"]) {
-      peerConnections["broadcaster"].close();
+      peerConnections["broadcaster"].close(); // Используй destroy() вместо close() для полного отключения
       const newPeerConnections = { ...peerConnections };
       delete newPeerConnections["broadcaster"];
       setPeerConnections(newPeerConnections);
     }
+  
+    // Отправить зрителям сообщение о завершении трансляции
+    socket?.emit("broadcast-ended", { roomId, username });
+  
+    // Сброс состояния
     setIsBroadcasting(false);
   };
+  
 
   const toggleMute = () => {
     if (stream) {

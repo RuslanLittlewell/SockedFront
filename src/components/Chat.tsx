@@ -6,9 +6,8 @@ interface Message {
   text: string;
   sender: string;
   timestamp: Date;
-  isHost: boolean;
-  isModerator: boolean;
   tokens: number;
+  donater?: string;
 }
 
 interface ChatProps {
@@ -27,10 +26,10 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
 
   useEffect(() => {
     const newSocket = io(apiUrl, {
-      query: { 
-        roomId, 
+      query: {
+        roomId,
         username,
-        isHost 
+        isHost,
       },
     });
 
@@ -65,7 +64,7 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
       const messageData = {
         text: newMessage,
         sender: username,
-        tokens: 0
+        tokens: 0,
       };
       console.log("Отправка сообщения:", messageData);
       socket.emit("chat message", messageData);
@@ -74,7 +73,9 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
   };
 
   return (
-    <div className={`bg-white text-black transition-all duration-300 h-[calc(100%-35px)]`}>
+    <div
+      className={`bg-white text-black transition-all duration-300 h-[calc(100%-35px)]`}
+    >
       <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-0 h-[calc(100%-73px)]">
         {messages.map((message) => (
           <div
@@ -83,21 +84,18 @@ export const Chat = ({ roomId, username, isHost = false }: ChatProps) => {
               message.sender === username ? "justify-end" : "justify-start"
             }`}
           >
-            <div
-              className={`max-w-[80%] rounded-lg p-2 ${
-                message.isHost
-                  ? "bg-purple-500 text-white"
-                  : message.isModerator
-                  ? "bg-green-500 text-white"
-                  : message.sender === username
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-700 text-white"
-              }`}
-            >
-              <div className="text-sm">{message.text}</div>
-              {message.tokens > 0 && (
-                <div className="text-xs mt-1 text-yellow-200">
-                  {message.tokens} токенов
+            <div className={`max-w-[80%] rounded-lg`}>
+              {message.tokens > 0 ? (
+                <div className="text-xs mt-1 bg-yellow-500 text-black font-bold">
+                  <span className="text-red-500">{message.donater}</span> tipped{" "}
+                  {message.tokens} token
+                </div>
+              ) : (
+                <div className="text-sm">
+                  {" "}
+                  <span className="text-black-500">
+                    {message.donater}
+                  </span>: {message.text}
                 </div>
               )}
             </div>
