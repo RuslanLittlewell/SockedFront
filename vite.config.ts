@@ -13,6 +13,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
       "simple-peer": "simple-peer/simplepeer.min.js",
+      "store": "./src/store", 
       crypto: 'crypto-browserify',
     },
   },

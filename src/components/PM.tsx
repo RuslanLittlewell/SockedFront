@@ -1,3 +1,5 @@
 export const PM = () => {
-    return <div>privat message</div>
+    return <div className="bg-white">
+        Private message
+    </div>
 }

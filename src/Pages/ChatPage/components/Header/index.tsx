@@ -1,10 +1,13 @@
+import { tokenState } from "@/store";
 import { FC } from "react";
+import { useRecoilValue } from "recoil";
 
 interface Props {
   username: string;
-  tokens: number;
 }
-export const Header: FC<Props> = ({ username, tokens }) => {
+export const Header: FC<Props> = ({ username }) => {
+
+  const tokens = useRecoilValue(tokenState);
   return (
     <>
       <div className="flex justify-between h-[88px] bg-white pt-[6px]">
@@ -36,7 +39,7 @@ export const Header: FC<Props> = ({ username, tokens }) => {
         <ul className="nav flex gap-[20px]">
           <li className="block text-shadow">
             <a
-              href="https://chaturbate.com/"
+              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               HOME
@@ -44,7 +47,7 @@ export const Header: FC<Props> = ({ username, tokens }) => {
           </li>
           <li className="block text-shadow">
             <a
-              href="https://chaturbate.com/discover/"
+              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               <span className="header-title">DISCOVER</span>
@@ -53,7 +56,7 @@ export const Header: FC<Props> = ({ username, tokens }) => {
 
           <li className="block text-shadow">
             <a
-              href="https://chaturbate.com/tags/"
+              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               TAGS
@@ -61,7 +64,7 @@ export const Header: FC<Props> = ({ username, tokens }) => {
           </li>
           <li className="block text-shadow">
             <a
-              href="https://chaturbate.com/spy-on-cams/"
+              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               PRIVATE SHOWS
@@ -85,7 +88,7 @@ export const Header: FC<Props> = ({ username, tokens }) => {
           <li className="block text-shadow">
             <a
               id="merch"
-              href="https://cbswag.com/"
+              href="/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white font-bold text-[13.999px] font-ubuntu"
@@ -96,7 +99,7 @@ export const Header: FC<Props> = ({ username, tokens }) => {
 
           <li className="block text-shadow ml-auto pr-[15px]">
             <a
-              href="https://chaturbate.com/b/fransiszarma/"
+              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               BROADCAST YOURSELF

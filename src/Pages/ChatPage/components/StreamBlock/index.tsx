@@ -224,7 +224,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
   };
 
   return (
-    <div className="relative w-1/2 h-full border border-[#acacac] bg-white rounded-xs overflow-hidden p-[10px]">
+    <div className="relative w-2/5 h-full border border-[#acacac] bg-white rounded-xs overflow-hidden p-[10px]">
       <p className="text-black text-left">{username}'s room</p>
       <div className="bg-[#e0e0e0] text-lg text-black text-left pl-[10px] mt-5 h-8">
         Welcome back, {username}
