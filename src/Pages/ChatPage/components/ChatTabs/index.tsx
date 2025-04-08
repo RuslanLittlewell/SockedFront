@@ -20,18 +20,6 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  const classes = [
-    "text-green-500",
-    "text-red-500",
-    "text-purple-500",
-    "text-pink-500",
-    "text-blue-500",
-  ];
-
-  function getRandomClass() {
-    return classes[Math.floor(Math.random() * classes.length)];
-  }
-
   useEffect(() => {
     const newSocket = io(apiUrl, {
       query: {
@@ -57,7 +45,7 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
           if (!userExists) {
             return [
               ...prevUsers,
-              { name: UserNickname, color: getRandomClass() },
+              { name: UserNickname, color: message.color },
             ];
           }
   
@@ -81,7 +69,7 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
         if (!userExists) {
           return [
             ...prevUsers,
-            { name: UserNickname, color: getRandomClass() },
+            { name: UserNickname, color: message.color },
           ];
         }
 

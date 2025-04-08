@@ -1,9 +1,7 @@
+import { LocalStream } from "@/components/StreamBlock/LocalStream";
+import { OBSStream } from "@/components/StreamBlock/OBSStream";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  FaExpand,
-  FaCompress,
-} from "react-icons/fa";
-import SimplePeer from "simple-peer"
+import SimplePeer from "simple-peer";
 import { io, Socket } from "socket.io-client";
 
 interface VideoStreamProps {
@@ -16,26 +14,26 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
   roomId,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
-  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
-  const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [selectedMicrophone, setSelectedMicrophone] = useState<string>("");
+  const [selectedCamera, setSelectedCamera] = useState<string>("");
+
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [resolution, setResolution] = useState<string>("1920x1080");
+
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isOBSStream, setOBSStream] = useState(false);
+  const [isPrivateStrem, setPrivateStream] = useState(false);
+  const [privateRequest, setPrivateRequest] = useState(false);
+
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [peerConnections, setPeerConnections] = useState<{
     [key: string]: RTCPeerConnection;
   }>({});
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [isBroadcasting, setIsBroadcasting] = useState(false);
-
-  const [resolution, setResolution] = useState("1920x1080");
-  const resolutionOptions = [
-    { label: "1920x1080", width: 1920, height: 1080 },
-    { label: "1280x720", width: 1280, height: 720 },
-    { label: "640x480", width: 640, height: 480 },
-  ];
-
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL;
@@ -43,7 +41,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     const newSocket = io(apiUrl, {
       query: { roomId, username, role: "broadcaster" },
     });
-
 
     setSocket(newSocket);
 
@@ -53,39 +50,14 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
   }, [roomId, username]);
 
   useEffect(() => {
-    const getDevices = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        setCameras(devices.filter((device) => device.kind === "videoinput"));
-        setMicrophones(
-          devices.filter((device) => device.kind === "audioinput")
-        );
-
-        const defaultCamera = devices.find(
-          (device) => device.kind === "videoinput"
-        );
-        const defaultMicrophone = devices.find(
-          (device) => device.kind === "audioinput"
-        );
-
-        if (defaultCamera) setSelectedCamera(defaultCamera.deviceId);
-        if (defaultMicrophone)
-          setSelectedMicrophone(defaultMicrophone.deviceId);
-      } catch (error) {
-        console.error("Ошибка при получении списка устройств:", error);
-      }
-    };
-
-    getDevices();
-  }, []);
-
-  useEffect(() => {
     const getPreviewStream = async () => {
       try {
+        // Остановка всех треков предыдущего потока, если он существует
         if (localStream) {
           localStream.getTracks().forEach((track) => track.stop());
         }
 
+        // Разбор разрешения (например, "1280x720") в числовые значения
         const [width, height] = resolution.split("x").map(Number);
         const constraints = {
           video: {
@@ -103,28 +75,45 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
           },
         };
 
-        await navigator.mediaDevices.getUserMedia(
-          constraints
-        ).then(stream => {
+        // Получение медиа-потока
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
+        // Установка полученного потока в элемент видео, если он существует
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
 
-          setStream(stream);
-          setLocalStream(stream);
-        })
+        // Обновление состояний с потоком
+        setStream(stream);
+        setLocalStream(stream);
 
+        // Получение списка всех устройств
+        const devices = await navigator.mediaDevices.enumerateDevices();
 
-       
+        // Фильтрация и установка устройств видеоввода и аудиоввода
+        setCameras(devices.filter((device) => device.kind === "videoinput"));
+        setMicrophones(
+          devices.filter((device) => device.kind === "audioinput")
+        );
+
+        // Выбор дефолтных устройств, если установлены
+        const defaultCamera = devices.find(
+          (device) => device.kind === "videoinput"
+        );
+        const defaultMicrophone = devices.find(
+          (device) => device.kind === "audioinput"
+        );
+
+        if (defaultCamera) setSelectedCamera(defaultCamera.deviceId);
+        if (defaultMicrophone)
+          setSelectedMicrophone(defaultMicrophone.deviceId);
       } catch (error) {
         console.error("Ошибка при получении превью:", error);
       }
     };
 
     getPreviewStream();
-  }, [selectedCamera, selectedMicrophone, resolution]);
-
+  }, [selectedCamera, selectedMicrophone, resolution, isOBSStream]);
 
   const startStream = async () => {
     if (!socket || !localStream) {
@@ -132,73 +121,53 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
       return;
     }
     const peer = new SimplePeer({
-			initiator: true,
-			trickle: false,
-			stream: stream as MediaStream
-		})
+      initiator: true,
+      trickle: false,
+      stream: stream as MediaStream,
+    });
 
     try {
-
       peer.on("signal", (data) => {
         console.log("📡 Sending offer to server", data);
-    
+
         socket.emit("offer", { offer: data, roomId, username });
       });
 
       socket.on("answer", (data) => {
         console.log("📡 Получен answer от зрителя");
-        peer.signal(data.answer); // Важно: передаём answer обратно в SimplePeer
+        peer.signal(data.answer);
       });
-    
+
       socket.on("ice-candidate", (candidate) => {
         console.log("📡 Получен ICE-кандидат");
         if (candidate) peer.signal(candidate);
       });
 
-      peer.on("stream", (stream) => {
-        
-        if(videoRef.current) {
-				  videoRef.current.srcObject = stream
-        }
-			
-		})
-  
       setIsBroadcasting(true);
-
     } catch (error) {
       console.error("Ошибка при запуске трансляции:", error);
     }
   };
 
-
-
   const handleStartBroadcasting = async () => {
+    console.log("start");
     await startStream();
     setIsBroadcasting(true);
   };
 
   const stopStream = () => {
-    // Остановить все медиатрекеры (аудио и видео)
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null); // Сброс локального потока
-    }
-  
-    // Закрытие PeerJS соединений
     if (peerConnections["broadcaster"]) {
-      peerConnections["broadcaster"].close(); // Используй destroy() вместо close() для полного отключения
+      peerConnections["broadcaster"].close();
       const newPeerConnections = { ...peerConnections };
       delete newPeerConnections["broadcaster"];
       setPeerConnections(newPeerConnections);
     }
-  
-    // Отправить зрителям сообщение о завершении трансляции
+
     socket?.emit("broadcast-ended", { roomId, username });
-  
-    // Сброс состояния
+
     setIsBroadcasting(false);
   };
-  
+
   const toggleFullscreen = () => {
     if (videoRef.current) {
       if (!document.fullscreenElement) {
@@ -211,104 +180,74 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     }
   };
 
-  const handleCameraChange = (deviceId: string) => {
-    setSelectedCamera(deviceId);
+  const handleCameraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCamera(e.target.value);
   };
 
-  const handleMicrophoneChange = (deviceId: string) => {
-    setSelectedMicrophone(deviceId);
+  const handleMicrophoneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMicrophone(e.target.value);
   };
 
   const handleResolutionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setResolution(e.target.value);
   };
 
+  socket?.on("private-request", ({ userName }) => {
+    setPrivateRequest(true);
+  });
+
+
+  const acceptPrivateStream = () => {
+    setPrivateStream(true);
+    setPrivateRequest(false);
+    socket?.emit("user-accept-private", { roomId })
+  };
+
   return (
     <div className="relative w-2/5 h-full border border-[#acacac] bg-white rounded-xs overflow-hidden p-[10px]">
-      <p className="text-black text-left">{username}'s room</p>
-      <div className="bg-[#e0e0e0] text-lg text-black text-left pl-[10px] mt-5 h-8">
-        Welcome back, {username}
-      </div>
+      {isOBSStream ? (
+        <OBSStream
+          isPrivateStrem={isPrivateStrem}
+          ref={videoRef}
+          setPrivateStream={setPrivateStream}
+        />
+      ) : (
+        <LocalStream
+          isBroadcasting={isBroadcasting}
+          isFullscreen={isFullscreen}
+          microphones={microphones}
+          selectedCamera={selectedCamera}
+          selectedMicrophone={selectedMicrophone}
+          resolution={resolution}
+          cameras={cameras}
+          username={username}
+          handleStartBroadcasting={handleStartBroadcasting}
+          handleResolutionChange={handleResolutionChange}
+          handleMicrophoneChange={handleMicrophoneChange}
+          handleCameraChange={handleCameraChange}
+          toggleFullscreen={toggleFullscreen}
+          stopStream={stopStream}
+          setOBSStream={setOBSStream}
+          ref={videoRef}
+        />
+      )}
 
-      <div className="grid grid-cols-[1fr_1fr] gap-[10px] mt-[10px]">
-        <div className="border border-[#acacac] pb-[10px]">
-          <p className="text-xl m-[10px] text-left">Camera</p>
-          <select
-            value={selectedCamera}
-            onChange={(e) => handleCameraChange(e.target.value)}
-            className="bg-white w-[calc(100%-20px)] text-black text-sm border border-[#acacac] mx-2 py-2 px-2"
-          >
-            {cameras.map((camera) => (
-              <option key={camera.deviceId} value={camera.deviceId}>
-                {camera.label || `Камера ${camera.deviceId.slice(0, 5)}`}
-              </option>
-            ))}
-          </select>
-          <p className="text-xl m-[10px] text-left">Resolution</p>
-          <select
-            value={resolution}
-            onChange={handleResolutionChange}
-            className="bg-white w-[calc(100%-20px)] text-black text-sm border border-[#acacac] mx-2 py-2 px-2"
-          >
-            {resolutionOptions.map((option) => (
-              <option key={option.label} value={option.label}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+      {privateRequest && (
+        <div className="absolute bottom-0 left-0  h-[100px] w-full bg-sky-100 pt-6">
+          <p className="text-blue-600 font-bold">
+            USER wants to start a private show. (
+            <span className="font-black text-[#f47321] cursor-pointer" onClick={acceptPrivateStream}>
+              Accept
+            </span>{" "}
+            or{" "}
+            <span className="font-black text-[#f47321] cursor-pointer" onClick={() => setPrivateRequest(false)}>
+              Decline
+            </span>
+            )
+          </p>
+          <p className="text-xs">This private show will earn you 6 tokens per minute, based on your settings.</p>
         </div>
-        <div className="relative w-full">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full object-cover"
-          />
-          <button
-            onClick={toggleFullscreen}
-            className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-          >
-            {isFullscreen ? (
-              <FaCompress className="text-white text-xl" />
-            ) : (
-              <FaExpand className="text-white text-xl" />
-            )}
-          </button>
-        </div>
-
-        <div className="border border-[#acacac] pb-[10px]">
-          <p className="text-xl m-[10px] text-left">Microphone</p>
-          <select
-            value={selectedMicrophone}
-            onChange={(e) => handleMicrophoneChange(e.target.value)}
-            className="bg-white text-black text-sm  w-[calc(100%-20px)] border border-[#acacac] mx-2 py-2 px-2"
-          >
-            {microphones.map((microphone) => (
-              <option key={microphone.deviceId} value={microphone.deviceId}>
-                {microphone.label ||
-                  `Микрофон ${microphone.deviceId.slice(0, 5)}`}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {isBroadcasting ? (
-          <button
-            onClick={stopStream}
-            className="bg-red-500 border border-red-700 text-white h-[32px] flex items-center justify-center self-center rounded"
-          >
-            Stop Boardcasting
-          </button>
-        ) : (
-          <button
-            onClick={handleStartBroadcasting}
-            className="bg-[#f47321] border border-[#cd5d26] text-white h-[32px] flex items-center justify-center self-center rounded"
-          >
-            Start Boardcasting
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 };

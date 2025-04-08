@@ -8,6 +8,7 @@ export interface Message {
     tokens: number;
     donater?: string;
     isHost?: boolean;
+    color: string;
   }
 
   export interface Users {
