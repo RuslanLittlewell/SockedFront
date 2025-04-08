@@ -192,7 +192,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     setResolution(e.target.value);
   };
 
-  socket?.on("private-request", ({ userName }) => {
+  socket?.on("private-request", () => {
     setPrivateRequest(true);
   });
 
