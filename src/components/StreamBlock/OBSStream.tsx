@@ -3,11 +3,10 @@ import { FC, forwardRef, Ref } from "react";
 
 interface Props {
   isPrivateStrem: boolean;
-  setPrivateStream: (e: boolean) => void;
 }
 
 export const OBSStream: FC<Props & { ref: Ref<HTMLVideoElement> }> = forwardRef(
-  ({ isPrivateStrem, setPrivateStream }, ref) => {
+  ({ isPrivateStrem }, ref) => {
     return (
       <div className="flex flex-col">
         <div
