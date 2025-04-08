@@ -209,7 +209,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
         <OBSStream
           isPrivateStrem={isPrivateStrem}
           ref={videoRef}
-          setPrivateStream={setPrivateStream}
         />
       ) : (
         <LocalStream
