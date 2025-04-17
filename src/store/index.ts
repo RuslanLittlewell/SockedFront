@@ -1,31 +1,54 @@
 import { atom } from "recoil";
 
+export enum MessageType {
+  Message  = 'message',
+  Token    = 'token',
+  Announce = 'announce',
+}
 export interface Message {
-    id: string;
-    text: string;
-    sender: string;
-    timestamp: Date;
-    tokens: number;
-    donater?: string;
-    isHost?: boolean;
-    color: string;
-  }
+  id: string;
+  text: string;
+  sender: string;
+  timestamp: Date;
+  tokens: number;
+  donater?: string;
+  isHost?: boolean;
+  color: string;
+  type: MessageType;
+}
 
-  export interface Users {
-    name: string;
-    color: string;
-  }
+export interface Users {
+  id: number;
+  name: string;
+  color: string;
+}
+
 export const tokenState = atom({
-  key: "tokens", 
+  key: "tokens",
   default: 0,
 });
 
 export const usersState = atom<Users[]>({
   key: "users",
-  default: [], 
+  default: [],
 });
 
 export const messagesState = atom<Message[]>({
   key: "messages",
-  default: [], 
+  default: [],
 });
+
+export const privateMessagesState = atom<Message[]>({
+  key: "privateMessages",
+  default: [],
+});
+
+export const chatActiveTabState = atom<number>({
+  key: "chatActiveTab",
+  default: 0,
+})
+
+export const privateChatUserState = atom<string>({
+  key: "privateChatUser",
+  default: "",
+})

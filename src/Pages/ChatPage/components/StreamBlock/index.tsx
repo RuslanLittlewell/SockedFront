@@ -1,6 +1,8 @@
 import { LocalStream } from "@/components/StreamBlock/LocalStream";
 import { OBSStream } from "@/components/StreamBlock/OBSStream";
+import { chatActiveTabState, MessageType, privateChatUserState } from "@/store";
 import React, { useEffect, useRef, useState } from "react";
+import { useRecoilState, useSetRecoilState } from "recoil";
 import SimplePeer from "simple-peer";
 import { io, Socket } from "socket.io-client";
 
@@ -29,11 +31,13 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-
+  const [userPrivateRequest, setUserPrivateRuqeust] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
   const [peerConnections, setPeerConnections] = useState<{
     [key: string]: RTCPeerConnection;
   }>({});
+  const [selectedPrivateUser, setSelectedPrivateUser] = useRecoilState(privateChatUserState);
+  const setChatTab = useSetRecoilState(chatActiveTabState)
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL;
@@ -150,9 +154,9 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
   };
 
   const handleStartBroadcasting = async () => {
-    console.log("start");
     await startStream();
     setIsBroadcasting(true);
+    setOBSStream(true)
   };
 
   const stopStream = () => {
@@ -166,6 +170,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     socket?.emit("broadcast-ended", { roomId, username });
 
     setIsBroadcasting(false);
+    setOBSStream(false)
   };
 
   const toggleFullscreen = () => {
@@ -192,7 +197,9 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     setResolution(e.target.value);
   };
 
-  socket?.on("private-request", () => {
+  socket?.on("private-request", ({ username }) => {
+    setUserPrivateRuqeust(username);
+    setSelectedPrivateUser(username);
     setPrivateRequest(true);
   });
 
@@ -201,7 +208,24 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     setPrivateStream(true);
     setPrivateRequest(false);
     socket?.emit("user-accept-private", { roomId })
+    setChatTab(1);
+    const messageData = {
+      text: 'Private show has begun.',
+      donater: selectedPrivateUser,
+      sender: "Admin",
+      tokens: 0,
+      type: MessageType.Announce
+    };
+
+    socket?.emit("private-message", {
+      username: selectedPrivateUser,
+      message: messageData,
+    });
   };
+
+  socket?.on("private-finished", () => {
+    setPrivateStream(false);
+  });
 
   return (
     <div className="relative w-2/5 h-full border border-[#acacac] bg-white rounded-xs overflow-hidden p-[10px]">
@@ -209,6 +233,9 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
         <OBSStream
           isPrivateStrem={isPrivateStrem}
           ref={videoRef}
+          isBroadcasting={isBroadcasting}
+          stopStream={stopStream}
+          handleStartBroadcasting={handleStartBroadcasting}
         />
       ) : (
         <LocalStream
@@ -226,7 +253,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
           handleCameraChange={handleCameraChange}
           toggleFullscreen={toggleFullscreen}
           stopStream={stopStream}
-          setOBSStream={setOBSStream}
           ref={videoRef}
         />
       )}
@@ -234,7 +260,7 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
       {privateRequest && (
         <div className="absolute bottom-0 left-0  h-[100px] w-full bg-sky-100 pt-6">
           <p className="text-blue-600 font-bold">
-            USER wants to start a private show. (
+            {userPrivateRequest} wants to start a private show. (
             <span className="font-black text-[#f47321] cursor-pointer" onClick={acceptPrivateStream}>
               Accept
             </span>{" "}

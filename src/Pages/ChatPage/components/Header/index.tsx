@@ -39,7 +39,6 @@ export const Header: FC<Props> = ({ username }) => {
         <ul className="nav flex gap-[20px]">
           <li className="block text-shadow">
             <a
-              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               HOME
@@ -47,7 +46,6 @@ export const Header: FC<Props> = ({ username }) => {
           </li>
           <li className="block text-shadow">
             <a
-              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               <span className="header-title">DISCOVER</span>
@@ -56,7 +54,6 @@ export const Header: FC<Props> = ({ username }) => {
 
           <li className="block text-shadow">
             <a
-              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               TAGS
@@ -64,7 +61,6 @@ export const Header: FC<Props> = ({ username }) => {
           </li>
           <li className="block text-shadow">
             <a
-              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               PRIVATE SHOWS
@@ -73,7 +69,6 @@ export const Header: FC<Props> = ({ username }) => {
 
           <li className="block text-shadow">
             <a
-              href="/followed-cams/offline/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               <div className="inline-block">
@@ -88,7 +83,6 @@ export const Header: FC<Props> = ({ username }) => {
           <li className="block text-shadow">
             <a
               id="merch"
-              href="/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white font-bold text-[13.999px] font-ubuntu"
@@ -99,7 +93,6 @@ export const Header: FC<Props> = ({ username }) => {
 
           <li className="block text-shadow ml-auto pr-[15px]">
             <a
-              href="/"
               className="text-white font-bold text-[13.999px] font-ubuntu"
             >
               BROADCAST YOURSELF

@@ -5,12 +5,10 @@ interface Props {
   isBroadcasting: boolean;
   handleStartBroadcasting: () => void;
   stopStream: () => void;
-  setOBSStream: (e: boolean) => void;
 }
 export const ButtonBlock: FC<Props> = ({
   isBroadcasting,
   handleStartBroadcasting,
-  setOBSStream,
   stopStream,
 }) => {
 
@@ -25,7 +23,7 @@ export const ButtonBlock: FC<Props> = ({
         </button>
       <div className="text-xs text-center mt-1">
         For high quality streams we strongly recommend:
-        <p className="text-indigo-700 cursor-pointer" onClick={() => setOBSStream(true)}>Use external software (OBS)</p>
+        <p className="text-indigo-700 cursor-pointer">Use external software (OBS)</p>
       </div>
     </div>
   );

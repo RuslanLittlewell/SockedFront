@@ -8,7 +8,6 @@ interface Props {
   handleMicrophoneChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   handleCameraChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   toggleFullscreen: () => void;
-  setOBSStream: (e: boolean) => void;
   stopStream: () => void;
   selectedMicrophone: string;
   selectedCamera: string;
@@ -28,7 +27,6 @@ export const LocalStream: FC<Props & { ref: Ref<HTMLVideoElement> }> =
         handleMicrophoneChange,
         handleCameraChange,
         toggleFullscreen,
-        setOBSStream,
         stopStream,
         selectedMicrophone,
         selectedCamera,
@@ -120,7 +118,6 @@ export const LocalStream: FC<Props & { ref: Ref<HTMLVideoElement> }> =
               isBroadcasting={isBroadcasting}
               stopStream={stopStream}
               handleStartBroadcasting={handleStartBroadcasting}
-              setOBSStream={setOBSStream}
             />
           </div>
         </>

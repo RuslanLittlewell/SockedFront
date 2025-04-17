@@ -1,8 +1,16 @@
 import { FC, useEffect, useState } from "react";
 import { Chat, PM, UsersTab } from "@/components";
 import clsx from "clsx";
-import { useRecoilState, useRecoilValue } from "recoil";
-import { Message, messagesState, tokenState, Users, usersState } from "@/store";
+import { useRecoilState, useSetRecoilState } from "recoil";
+import {
+  chatActiveTabState,
+  Message,
+  messagesState,
+  privateMessagesState,
+  tokenState,
+  Users,
+  usersState,
+} from "@/store";
 import { io, Socket } from "socket.io-client";
 
 interface Props {
@@ -11,12 +19,12 @@ interface Props {
 }
 
 export const ChatTabs: FC<Props> = ({ roomId, username }) => {
-  const [tab, setTab] = useState(0);
-  const users = useRecoilValue(usersState);
+  const [tab, setTab] = useRecoilState(chatActiveTabState);
+  const setTokens = useSetRecoilState(tokenState);
+  const setMessages = useSetRecoilState(messagesState);
+  const setPrivateMessages = useSetRecoilState(privateMessagesState);
+  const [users, setUsers] = useRecoilState(usersState);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [_, setTokens] = useRecoilState(tokenState);
-  const [__, setUsers] = useRecoilState(usersState);
-  const [messages, setMessages] = useRecoilState(messagesState);
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -35,23 +43,6 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
     newSocket.on("messageHistory", (history: Message[]) => {
       console.log("Получена история сообщений:", history);
       setMessages(history);
-      history.forEach((message) => {
-        const UserNickname = message.donater;
-        setUsers((prevUsers: any) => {
-          const userExists = (prevUsers as Users[]).some(
-            (user: Users) => user.name === UserNickname
-          );
-  
-          if (!userExists) {
-            return [
-              ...prevUsers,
-              { name: UserNickname, color: message.color },
-            ];
-          }
-  
-          return prevUsers;
-        });
-      })
     });
 
     newSocket.on("chat message", (message: Message) => {
@@ -60,28 +51,23 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
       if (message.tokens > 0) {
         setTokens((i: number) => i + message.tokens);
       }
-      const UserNickname = message.donater;
-      setUsers((prevUsers: any) => {
-        const userExists = (prevUsers as Users[]).some(
-          (user: Users) => user.name === UserNickname
-        );
+    });
 
-        if (!userExists) {
-          return [
-            ...prevUsers,
-            { name: UserNickname, color: message.color },
-          ];
-        }
-
-        return prevUsers;
-      });
+    newSocket.on("private-message", (message: Message) => {
+      setPrivateMessages((prev) => [...prev, message]);
+      // if (message.tokens > 0) {
+      //   setTokens((i: number) => i + message.tokens);
+      // }
     });
 
     newSocket.on("messages-deleted", () => {
       console.log("🗑️ Все сообщения были удалены сервером.");
       setMessages([]); // Очистка локального состояния сообщений на клиенте
       setTokens(0);
-      setUsers([]);
+    });
+
+    newSocket.on("usersData", (users: Users[]) => {
+      setUsers(users);
     });
 
     setSocket(newSocket);
@@ -92,8 +78,8 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
   }, [roomId, username]);
 
   const tabs = [
-    <Chat username={username} messages={messages} socket={socket as Socket} />,
-    <PM />,
+    <Chat username={username} socket={socket as Socket} />,
+    <PM users={users} socket={socket as Socket} username={username} />,
     <UsersTab users={users} />,
   ];
 

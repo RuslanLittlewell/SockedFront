@@ -4,6 +4,18 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    'text-green-500',
+    'text-red-500',
+    'text-purple-500',
+    'text-pink-500',
+    'text-blue-500',
+    'bg-green-500',
+    'bg-red-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-blue-500',
+  ],
   theme: {
     extend: {
       fontFamily: {

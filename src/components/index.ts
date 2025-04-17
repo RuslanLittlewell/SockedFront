@@ -1,3 +1,3 @@
-export { Chat } from './Chat'
-export { PM } from './PM'
-export { UsersTab } from './Users'
+export { Chat } from './ChatBlock/Chat'
+export { PM } from './ChatBlock/PM'
+export { UsersTab } from './ChatBlock/Users'
