@@ -61,7 +61,6 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
           localStream.getTracks().forEach((track) => track.stop());
         }
 
-        // Разбор разрешения (например, "1280x720") в числовые значения
         const [width, height] = resolution.split("x").map(Number);
         const constraints = {
           video: {
@@ -79,22 +78,17 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
           },
         };
 
-        // Получение медиа-потока
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        // Установка полученного потока в элемент видео, если он существует
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
 
-        // Обновление состояний с потоком
         setStream(stream);
         setLocalStream(stream);
 
-        // Получение списка всех устройств
         const devices = await navigator.mediaDevices.enumerateDevices();
 
-        // Фильтрация и установка устройств видеоввода и аудиоввода
         setCameras(devices.filter((device) => device.kind === "videoinput"));
         setMicrophones(
           devices.filter((device) => device.kind === "audioinput")
@@ -117,7 +111,13 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
     };
 
     getPreviewStream();
-  }, [selectedCamera, selectedMicrophone, resolution, isOBSStream]);
+  }, [selectedCamera, selectedMicrophone, resolution]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [isOBSStream])
 
   const startStream = async () => {
     if (!socket || !localStream) {
@@ -137,12 +137,12 @@ export const StreamBlock: React.FC<VideoStreamProps> = ({
         socket.emit("offer", { offer: data, roomId, username });
       });
 
-      socket.on("answer", (data) => {
+      socket.once("answer", (data) => {
         console.log("📡 Получен answer от зрителя");
-        peer.signal(data.answer);
+        peer?.signal(data.answer);
       });
 
-      socket.on("ice-candidate", (candidate) => {
+      socket.once("ice-candidate", (candidate) => {
         console.log("📡 Получен ICE-кандидат");
         if (candidate) peer.signal(candidate);
       });
