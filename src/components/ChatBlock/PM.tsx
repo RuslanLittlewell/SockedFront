@@ -1,4 +1,9 @@
-import { MessageType, privateChatUserState, privateMessagesState, Users } from "@/store";
+import {
+  MessageType,
+  privateChatUserState,
+  privateMessagesState,
+  Users,
+} from "@/store";
 import clsx from "clsx";
 import { FC, useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
@@ -57,7 +62,7 @@ export const PM: FC<Props> = ({ users, socket, username }) => {
         text: newMessage,
         sender: username,
         isHost: true,
-        type: MessageType.Message
+        type: MessageType.Message,
       };
       socket.emit("private-message", {
         username: selectedUser,
@@ -84,7 +89,11 @@ export const PM: FC<Props> = ({ users, socket, username }) => {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-1 pb-0 h-[calc(100%-83px)]">
             {messages.map((message) => (
-              <MessageBlock key={message.id} message={message} username={username} />
+              <MessageBlock
+                key={message.id}
+                message={message}
+                username={username}
+              />
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -118,26 +127,28 @@ export const PM: FC<Props> = ({ users, socket, username }) => {
           <div className="relative overflow-auto bg-white h-[calc(100%-35px)]">
             {filteredUsers.map((user) => {
               const replaced = user.color.replace(/text-/g, "bg-");
-              return (
-                <div
-                  className={clsx(
-                    "flex  cursor-pointer gap-2 text-left border p-2",
-                    user.color
-                  )}
-                  onClick={() => setSelectedUser(user.name)}
-                  key={user.id}
-                >
+              if (user.joined) {
+                return (
                   <div
                     className={clsx(
-                      replaced,
-                      "text-2xl uppercase flex items-center justify-center text-white w-[40px] h-[40px] rounded-full"
+                      "flex  cursor-pointer gap-2 text-left border p-2",
+                      user.color
                     )}
+                    onClick={() => setSelectedUser(user.name)}
+                    key={user.id}
                   >
-                    {user.name.charAt(0)}
+                    <div
+                      className={clsx(
+                        replaced,
+                        "text-2xl uppercase flex items-center justify-center text-white w-[40px] h-[40px] rounded-full"
+                      )}
+                    >
+                      {user.name.charAt(0)}
+                    </div>
+                    <div className="font-black ">{user.name}</div>
                   </div>
-                  <div className="font-black ">{user.name}</div>
-                </div>
-              );
+                );
+              }
             })}
           </div>
         </>

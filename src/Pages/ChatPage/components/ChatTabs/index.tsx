@@ -82,8 +82,9 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
     <PM users={users} socket={socket as Socket} username={username} />,
     <UsersTab users={users} />,
   ];
-
-  const tabName = ["CHAT", "PM", `USERS (${users.length})`];
+  const userCount = users.filter(i => i.joined).length;
+  
+  const tabName = ["CHAT", "PM", `USERS (${userCount})`];
 
   return (
     <div className="w-3/5 border border-[#acacac]">

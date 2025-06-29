@@ -41,7 +41,7 @@ export const UsersTab: FC<Props> = ({ users }) => {
     "text-pink-500": 4,
     "text-blue-500": 5,
   };
-  
+
   const sortedUsers = [...users].sort((a, b) => {
     return (colorOrder[a.color] || 999) - (colorOrder[b.color] || 999);
   });
@@ -49,24 +49,28 @@ export const UsersTab: FC<Props> = ({ users }) => {
   return (
     <div className="relative overflow-auto bg-white h-[calc(100%-25px)]">
       <div className="flex flex-col gap-1 pt-3">
-        {sortedUsers.map((user, idx) => (
-          <div key={idx} className="flex pl-3 items-center">
-            <img
-              className="mr-2 w-[15px]"
-              src="https://web.static.mmcdn.com/tsdefaultassets/gendericons/male.svg"
-              alt="gender-icon"
-            />
-            <div
-              onClick={(e) => handleUserClick(e, user)}
-              className={clsx(
-                "font-bold text-sm text-left cursor-pointer hover:underline",
-                user.color
-              )}
-            >
-              {user.name}
-            </div>
-          </div>
-        ))}
+        {sortedUsers.map((user, idx) => {
+          if (user.joined) {
+            return (
+              <div key={idx} className="flex pl-3 items-center">
+                <img
+                  className="mr-2 w-[15px]"
+                  src="https://web.static.mmcdn.com/tsdefaultassets/gendericons/male.svg"
+                  alt="gender-icon"
+                />
+                <div
+                  onClick={(e) => handleUserClick(e, user)}
+                  className={clsx(
+                    "font-bold text-sm text-left cursor-pointer hover:underline",
+                    user.color
+                  )}
+                >
+                  {user.name}
+                </div>
+              </div>
+            );
+          }
+        })}
       </div>
 
       {isOpen && selectedUser && (

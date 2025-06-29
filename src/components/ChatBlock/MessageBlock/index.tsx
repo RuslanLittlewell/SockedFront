@@ -42,7 +42,12 @@ export const MessageBlock: FC<Props> = ({ message, username }) => {
         )}
         {message.type === MessageType.Announce && (
           <div className="text-xs mt-1 bg-orange-300 text-black font-bold px-1 py-1">
-           {message.text}
+            {message.text}
+          </div>
+        )}
+        {message.type === MessageType.Notify && (
+          <div className="text-xs mt-1 text-black font-bold px-1 py-1">
+            User <span className={clsx("text-black-500 font-bold", findUser?.color)}>{findUser?.name}</span> {message.text}.
           </div>
         )}
       </div>

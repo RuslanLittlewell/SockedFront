@@ -4,6 +4,7 @@ export enum MessageType {
   Message  = 'message',
   Token    = 'token',
   Announce = 'announce',
+  Notify = 'notify',
 }
 export interface Message {
   id: string;
@@ -21,6 +22,7 @@ export interface Users {
   id: number;
   name: string;
   color: string;
+  joined: boolean;
 }
 
 export const tokenState = atom({
