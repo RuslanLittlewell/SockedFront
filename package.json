@@ -13,6 +13,7 @@
     "autoprefixer": "^10.4.17",
     "clsx": "^2.1.1",
     "crypto-browserify": "^3.12.1",
+    "formik": "^2.4.6",
     "path": "^0.12.7",
     "peerjs": "^1.5.4",
     "postcss": "^8.4.35",

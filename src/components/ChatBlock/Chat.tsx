@@ -1,5 +1,5 @@
 import { messagesState, MessageType } from "@/store";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, FC } from "react";
 import { useRecoilValue } from "recoil";
 import { Socket } from "socket.io-client";
 import { MessageBlock } from "./MessageBlock";
@@ -10,7 +10,7 @@ interface ChatProps {
   socket: Socket;
 }
 
-export const Chat = ({ username, socket }: ChatProps) => {
+export const Chat: FC<ChatProps> = ({ username, socket }) => {
   const [newMessage, setNewMessage] = useState("");
   const messages = useRecoilValue(messagesState);
   const messagesEndRef = useRef<HTMLDivElement>(null);

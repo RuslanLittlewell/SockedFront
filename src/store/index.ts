@@ -23,6 +23,7 @@ export interface Users {
   name: string;
   color: string;
   joined: boolean;
+  type: string;
 }
 
 export const tokenState = atom({
@@ -38,6 +39,11 @@ export const usersState = atom<Users[]>({
 export const messagesState = atom<Message[]>({
   key: "messages",
   default: [],
+});
+
+export const allPrivateMessagesState = atom<{[key: string]: Message[]}>({
+  key: "allPrivateMessages",
+  default: {},
 });
 
 export const privateMessagesState = atom<Message[]>({

@@ -21,7 +21,7 @@ export const MessageBlock: FC<Props> = ({ message, username }) => {
       <div className={`w-full text-left rounded-lg`}>
         {message.type === MessageType.Token && (
           <div className="text-xs mt-1 bg-yellow-300 text-black font-bold px-1 py-1">
-            <span className="text-red-500">{message.donater}</span> tipped{" "}
+            <span className={clsx(findUser?.color)}>{message.donater}</span> tipped{" "}
             {message.tokens} token
           </div>
         )}
@@ -47,7 +47,7 @@ export const MessageBlock: FC<Props> = ({ message, username }) => {
         )}
         {message.type === MessageType.Notify && (
           <div className="text-xs mt-1 text-black font-bold px-1 py-1">
-            User <span className={clsx("text-black-500 font-bold", findUser?.color)}>{findUser?.name}</span> {message.text}.
+            {findUser?.type} <span className={clsx("text-black-500 font-bold", findUser?.color)}>{findUser?.name}</span> {message.text}.
           </div>
         )}
       </div>

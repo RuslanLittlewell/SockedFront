@@ -2,12 +2,14 @@ import { FC, useState, MouseEvent } from "react";
 import clsx from "clsx";
 import { Users } from "@/store";
 import { UserContext } from "./ContextUser";
+import { Socket } from "socket.io-client";
 
 interface Props {
   users: Users[];
+  socket: Socket;
 }
 
-export const UsersTab: FC<Props> = ({ users }) => {
+export const UsersTab: FC<Props> = ({ users, socket }) => {
   const [selectedUser, setSelectedUser] = useState<Users | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -78,6 +80,7 @@ export const UsersTab: FC<Props> = ({ users }) => {
           selectedUser={selectedUser}
           menuPosition={menuPosition}
           closeMenu={closeMenu}
+          socket={socket}
         />
       )}
     </div>

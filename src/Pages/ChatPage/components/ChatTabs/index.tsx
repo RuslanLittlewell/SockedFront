@@ -3,6 +3,7 @@ import { Chat, PM, UsersTab } from "@/components";
 import clsx from "clsx";
 import { useRecoilState, useSetRecoilState } from "recoil";
 import {
+  allPrivateMessagesState,
   chatActiveTabState,
   Message,
   messagesState,
@@ -12,6 +13,10 @@ import {
   usersState,
 } from "@/store";
 import { io, Socket } from "socket.io-client";
+import tokenOne from "@/assets/sounds/token-1-2.mp3";
+import tokenSmall from "@/assets/sounds/token-3-24.mp3";
+import tokenMedium from "@/assets/sounds/token-25-99.mp3";
+import tokenHuge from "@/assets/sounds/token-100.mp3";
 
 interface Props {
   roomId: string;
@@ -24,6 +29,9 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
   const setMessages = useSetRecoilState(messagesState);
   const setPrivateMessages = useSetRecoilState(privateMessagesState);
   const [users, setUsers] = useRecoilState(usersState);
+  const [allPivateMsg, setAllPivateMsg] = useRecoilState(
+    allPrivateMessagesState
+  );
   const [socket, setSocket] = useState<Socket | null>(null);
 
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -48,16 +56,29 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
     newSocket.on("chat message", (message: Message) => {
       console.log("Получено новое сообщение:", message);
       setMessages((prev) => [...prev, message]);
-      if (message.tokens > 0) {
+      const tokens = message.tokens;
+      if (tokens > 0) {
+        let audio;
+
+        if (tokens <= 2) {
+          audio = tokenOne;
+        } else if (tokens <= 24) {
+          audio = tokenSmall;
+        } else if (tokens <= 99) {
+          audio = tokenMedium;
+        } else {
+          audio = tokenHuge;
+        }
+
+        new Audio(audio).play();
+
         setTokens((i: number) => i + message.tokens);
       }
     });
 
     newSocket.on("private-message", (message: Message) => {
       setPrivateMessages((prev) => [...prev, message]);
-      // if (message.tokens > 0) {
-      //   setTokens((i: number) => i + message.tokens);
-      // }
+      newSocket.emit("get-all-private-messages");
     });
 
     newSocket.on("messages-deleted", () => {
@@ -70,6 +91,10 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
       setUsers(users);
     });
 
+    newSocket.on("get-all-private-messages", (data) => {
+      setAllPivateMsg(data);
+    });
+
     setSocket(newSocket);
 
     return () => {
@@ -79,11 +104,16 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
 
   const tabs = [
     <Chat username={username} socket={socket as Socket} />,
-    <PM users={users} socket={socket as Socket} username={username} />,
-    <UsersTab users={users} />,
+    <PM
+      users={users}
+      socket={socket as Socket}
+      username={username}
+      allPivateMsg={allPivateMsg}
+    />,
+    <UsersTab users={users} socket={socket as Socket} />,
   ];
-  const userCount = users.filter(i => i.joined).length;
-  
+  const userCount = users.filter((i) => i.joined).length;
+
   const tabName = ["CHAT", "PM", `USERS (${userCount})`];
 
   return (

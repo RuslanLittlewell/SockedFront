@@ -1,4 +1,5 @@
 import {
+  Message,
   MessageType,
   privateChatUserState,
   privateMessagesState,
@@ -14,8 +15,9 @@ interface Props {
   users: Users[];
   socket: Socket;
   username: string;
+  allPivateMsg: { [key: string]: Message[] };
 }
-export const PM: FC<Props> = ({ users, socket, username }) => {
+export const PM: FC<Props> = ({ users, socket, username, allPivateMsg }) => {
   const colorOrder: { [key: string]: number } = {
     "text-green-500": 1,
     "text-red-500": 2,
@@ -32,8 +34,8 @@ export const PM: FC<Props> = ({ users, socket, username }) => {
   const [newMessage, setNewMessage] = useState("");
   const [selectedUser, setSelectedUser] = useRecoilState(privateChatUserState);
   const [messages, setMessages] = useRecoilState(privateMessagesState);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     socket.emit("get-private-messages-history", { username: selectedUser });
@@ -54,6 +56,19 @@ export const PM: FC<Props> = ({ users, socket, username }) => {
     );
     setFilteredUsers(filtered);
   };
+
+ const findLastMessage = (userName: string) => {
+  const userMessages = allPivateMsg[userName];
+  
+  if (!userMessages || userMessages.length === 0) {
+    return '';
+  }
+  const lastMessage =  userMessages[userMessages.length - 1];
+  if(lastMessage.isHost) {
+    return `Me: ${lastMessage.text}`
+  }
+  return lastMessage.text;
+};
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +160,10 @@ export const PM: FC<Props> = ({ users, socket, username }) => {
                     >
                       {user.name.charAt(0)}
                     </div>
+                    <div>
                     <div className="font-black ">{user.name}</div>
+                    <div className="font-thin text-black text-sm">{findLastMessage(user.name)}</div>
+                    </div>
                   </div>
                 );
               }

@@ -6,16 +6,19 @@ import { MdOutlineAlternateEmail } from "react-icons/md";
 import { LuUserRoundX } from "react-icons/lu";
 import { TfiEmail } from "react-icons/tfi";
 import { useSetRecoilState } from "recoil";
+import { Socket } from "socket.io-client";
 
 interface Props {
   menuPosition: { x: number; y: number };
   selectedUser: Users;
+  socket: Socket;
   closeMenu: () => void;
 }
 
 export const UserContext: FC<Props> = ({
   menuPosition,
   selectedUser,
+  socket,
   closeMenu,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,6 +45,12 @@ export const UserContext: FC<Props> = ({
     setTab(1);
     setSelectedUser(selectedUser.name);
   };
+
+  const handleIgnoreUser = () => {
+    socket?.emit("set-user-join", { id: selectedUser.id });
+    closeMenu();
+  };
+
   return (
     <div
       ref={containerRef}
@@ -83,7 +92,7 @@ export const UserContext: FC<Props> = ({
         <li className="flex items-center cursor-pointer hover:underline px-2 py-1 gap-2">
           <MdOutlineAlternateEmail /> Mention this user
         </li>
-        <li className="flex items-center cursor-pointer hover:underline px-2 py-1 gap-2">
+        <li className="flex items-center cursor-pointer hover:underline px-2 py-1 gap-2" onClick={handleIgnoreUser}>
           <LuUserRoundX />
           Ignore this user
         </li>
