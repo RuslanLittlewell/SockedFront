@@ -218,37 +218,6 @@ useEffect(() => {
     }
   }, [isOBSStream]);
   
-  // Запуск трансляции
-  // const startStream = async () => {
-  //   if (!socket || !localStream) {
-  //     console.error("Socket или локальный стрим не готовы");
-  //     return;
-  //   }
-  //   const peer = new SimplePeer({
-  //     initiator: true,
-  //     trickle: false,
-  //     stream: stream as MediaStream,
-  //   });
-  //   peerRef.current = peer;
-
-  //   try {
-  //     peer.on("signal", (data) => {
-  //       console.log("📡 Sending offer to server", data);
-
-  //       socket.emit("offer", { offer: data, roomId, username });
-  //       currentOfferRef.current = data;
-  //     });
-
-  //     socket.once("answer", (data) => {
-  //       console.log("📡 Получен answer от зрителя");
-  //       peer?.signal(data.answer);
-  //     });
-
-  //     setIsBroadcasting(true);
-  //   } catch (error) {
-  //     console.error("Ошибка при запуске трансляции:", error);
-  //   }
-  // };
   // Запуск трансляции экрана
   const startScreenShare = async () => {
     if (!socket) {
@@ -275,10 +244,6 @@ useEffect(() => {
       currentScreenOfferRef.current = data;
     });
 
-    // socket.once("screen-answer", (data) => {
-    //   screenPeer.signal(data.answer);
-    // });
-
     screenStream.getVideoTracks()[0].addEventListener("ended", () => {
       screenPeer.destroy();
       socket.emit("screen-ended", { roomId });
@@ -286,8 +251,8 @@ useEffect(() => {
   };
 
   const handleStartBroadcasting = async () => {
-    // await startStream();
     await startScreenShare();
+     socket?.emit("stream-started", { roomId });
     setIsBroadcasting(true);
     setOBSStream(true);
   };
