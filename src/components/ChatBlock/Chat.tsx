@@ -1,4 +1,4 @@
-import { messagesState, MessageType } from "@/store";
+import { messagesState, MessageType, tipMenuState } from "@/store";
 import { useState, useEffect, useRef, FC } from "react";
 import { useRecoilValue } from "recoil";
 import { Socket } from "socket.io-client";
@@ -13,10 +13,29 @@ interface ChatProps {
 export const Chat: FC<ChatProps> = ({ username, socket }) => {
   const [newMessage, setNewMessage] = useState("");
   const messages = useRecoilValue(messagesState);
+  const tipMenu = useRecoilValue(tipMenuState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (socket) {
+      const noticeString = tipMenu
+        .map((item) => `Notice: (${item.value}) ${item.description}`)
+        .join("\n");
+
+      const messageData = {
+        text: noticeString,
+        sender: username,
+        type: MessageType.TipMenu,
+        isHost: true,
+      };
+
+      socket?.emit("chat message", messageData);
+    }
+  }, [tipMenu, socket]);
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +57,11 @@ export const Chat: FC<ChatProps> = ({ username, socket }) => {
     >
       <div className="flex-1 overflow-y-auto p-4 space-y-1 pb-0 h-[calc(100%-73px)]">
         {messages.map((message) => (
-          <MessageBlock key={message.id} message={message} username={username} />
+          <MessageBlock
+            key={message.id}
+            message={message}
+            username={username}
+          />
         ))}
         <div ref={messagesEndRef} />
       </div>

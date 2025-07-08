@@ -8,6 +8,7 @@ import {
   Message,
   messagesState,
   privateMessagesState,
+  tipMenuState,
   tokenState,
   Users,
   usersState,
@@ -27,13 +28,14 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
   const [tab, setTab] = useRecoilState(chatActiveTabState);
   const setTokens = useSetRecoilState(tokenState);
   const setMessages = useSetRecoilState(messagesState);
+  const setTipMenu = useSetRecoilState(tipMenuState);
   const setPrivateMessages = useSetRecoilState(privateMessagesState);
   const [users, setUsers] = useRecoilState(usersState);
+
   const [allPivateMsg, setAllPivateMsg] = useRecoilState(
     allPrivateMessagesState
   );
   const [socket, setSocket] = useState<Socket | null>(null);
-
   const apiUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -87,6 +89,10 @@ export const ChatTabs: FC<Props> = ({ roomId, username }) => {
       setTokens(0);
     });
 
+    newSocket.on("update-tip-menu", (data) => {
+      setTipMenu(data.tipMenu);
+    });
+    
     newSocket.on("usersData", (users: Users[]) => {
       setUsers(users);
     });

@@ -4,14 +4,11 @@ import Header from "./components/Header";
 import { useFormik } from "formik";
 import { ChatTabs } from "./components/ChatTabs";
 import { LoginModal } from "@/components/LoginModal";
-import { checkRoom, fetchTipMenu } from "@/api/rooms";
+import { checkRoom } from "@/api/rooms";
 import { toast } from "react-toastify";
-import { useSetRecoilState } from "recoil";
-import { tipMenuState } from "@/store";
 
 export const ChatPage: FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const setTipmenu = useSetRecoilState(tipMenuState);
   const [room, setRoom] = useState("");
 
   const form = useFormik({
@@ -39,9 +36,6 @@ export const ChatPage: FC = () => {
            toast.error("Комната не создана");
         }
       });
-      fetchTipMenu(values.roomId).then((res) => {
-        setTipmenu(res.data);
-      })
     },
   });
 
