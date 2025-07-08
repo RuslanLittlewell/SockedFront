@@ -1,10 +1,11 @@
 import { atom } from "recoil";
 
 export enum MessageType {
-  Message  = 'message',
-  Token    = 'token',
-  Announce = 'announce',
-  Notify = 'notify',
+  Message = "message",
+  Token = "token",
+  Announce = "announce",
+  Notify = "notify",
+  TipMenu = "tipMenu",
 }
 export interface Message {
   id: string;
@@ -26,6 +27,11 @@ export interface Users {
   type: string;
 }
 
+export interface TipMenu {
+  id: number;
+  description: string;
+  value: number;
+}
 export const tokenState = atom({
   key: "tokens",
   default: 0,
@@ -41,7 +47,7 @@ export const messagesState = atom<Message[]>({
   default: [],
 });
 
-export const allPrivateMessagesState = atom<{[key: string]: Message[]}>({
+export const allPrivateMessagesState = atom<{ [key: string]: Message[] }>({
   key: "allPrivateMessages",
   default: {},
 });
@@ -54,9 +60,14 @@ export const privateMessagesState = atom<Message[]>({
 export const chatActiveTabState = atom<number>({
   key: "chatActiveTab",
   default: 0,
-})
+});
 
 export const privateChatUserState = atom<string>({
   key: "privateChatUser",
   default: "",
-})
+});
+
+export const tipMenuState = atom<TipMenu[]>({
+  key: "tipMenu",
+  default: [],
+});
